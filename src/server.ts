@@ -22,7 +22,7 @@ app.use("*", async (c: Context, next) => {
   await next();
 });
 
-// optimized rate limiting middleware
+// rate limiting middleware using Redis
 app.use("*", async (c: Context, next) => {
   // skip rate limiting for health checks
   if (c.req.path === SERVER.HEALTH_CHECK_PATH) {
@@ -32,11 +32,11 @@ app.use("*", async (c: Context, next) => {
   const ip = c.req.header("CF-Connecting-IP") || "unknown";
   const key = `${RATE_LIMIT.KEY_PREFIX}${REDIS.KEY_SEPARATOR}${ip}`;
 
-  // use a single Redis operation to both increment and get the result
+  // use Redis for atomic operations
   const [current] = await redis
     .multi()
     .incr(key)
-    .expire(key, RATE_LIMIT.WINDOW_MS / 1000, "NX") // only set expiration if key doesn't exist
+    .expire(key, RATE_LIMIT.WINDOW_MS / 1000, "NX")
     .exec();
 
   if (current > RATE_LIMIT.MAX_REQUESTS) {
@@ -58,18 +58,22 @@ app.get("/metadata", async (c: Context) => {
   }
 
   try {
-    // check cache first
+    // check KV cache first (faster reads at edge)
     const key = `${CACHE.METADATA_KEY_PREFIX}${REDIS.KEY_SEPARATOR}${url}`;
-    const cached = await redis.get(key);
+    const cached = await c.env?.METADATA_CACHE?.get(key);
+    console.log("c.env", c.env);
+    console.log("cached", cached);
     if (cached) {
-      return c.json(cached);
+      return c.json(JSON.parse(cached));
     }
 
     // extract metadata
     const metadata = await extractMetadata(url);
 
-    // cache for configured TTL
-    await redis.set(key, metadata, { ex: CACHE.METADATA_TTL });
+    // cache in KV (edge caching for faster subsequent reads)
+    await c.env?.METADATA_CACHE?.put(key, JSON.stringify(metadata), {
+      expirationTtl: CACHE.METADATA_TTL,
+    });
 
     return c.json(metadata);
   } catch (error) {
@@ -84,7 +88,5 @@ app.onError((err: Error, c: Context) => {
   return c.json({ error: "internal server error" }, 500);
 });
 
-export default {
-  port: process.env.PORT || SERVER.PORT,
-  fetch: app.fetch,
-};
+// Export for Cloudflare Workers
+export default app;

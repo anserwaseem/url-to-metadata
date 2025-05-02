@@ -4,19 +4,20 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --watch src/server.ts",
-    "build": "bun build ./src/server.ts --outdir ./dist",
+    "build": "bun build ./src/server.ts --outdir ./dist --target node",
     "start": "bun run dist/server.js",
-    "test": "bun test"
+    "test": "bun test",
+    "deploy": "bunx wrangler deploy"
   },
   "dependencies": {
     "hono": "^4.0.0",
     "cheerio": "^1.0.0-rc.12",
-    "playwright": "^1.42.1",
     "@upstash/redis": "^1.30.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "bun-types": "^1.0.0",
     "typescript": "^5.3.3",
-    "bun-types": "^1.0.0"
+    "wrangler": "^4.13.2"
   }
 }

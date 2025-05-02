@@ -78,7 +78,12 @@ curl "http://localhost:3003/metadata?url=https://github.com"
 bunx wrangler login
 ```
 
-2. Deploy to Cloudflare Workers:
+2. Create a new Cloudflare KV namespace:
+```bash
+bunx wrangler kv namespace create "NAMESPACE_NAME"
+```
+
+3. Deploy to Cloudflare Workers:
 ```bash
 bunx wrangler deploy
 ```

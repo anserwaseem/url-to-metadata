@@ -1,0 +1,20 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "url-to-metadata",
+  "main": "src/server.ts",
+  "compatibility_date": "2025-04-24",
+  "kv_namespaces": [
+    {
+      "binding": "METADATA_CACHE",
+      "id": "your-kv-namespace-id"
+    }
+  ],
+  "vars": {
+    "UPSTASH_REDIS_REST_URL": "your-redis-url",
+    "UPSTASH_REDIS_REST_TOKEN": "your-redis-token",
+    "BROWSERLESS_TOKEN": "your-browserless-token"
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+} 

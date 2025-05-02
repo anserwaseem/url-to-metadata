@@ -1,7 +1,7 @@
 // rate limiting constants
 export const RATE_LIMIT = {
-  WINDOW_MS: 60 * 1000, // 1 minute
-  MAX_REQUESTS: 100,
+  WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  MAX_REQUESTS: 2000,
   KEY_PREFIX: "rate_limit",
 } as const;
 

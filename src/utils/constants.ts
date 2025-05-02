@@ -1,6 +1,6 @@
 // rate limiting constants
 export const RATE_LIMIT = {
-  WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  WINDOW_MS: 60 * 60 * 1000, // 1 hour in seconds
   MAX_REQUESTS: 2000,
   KEY_PREFIX: "rate_limit",
 } as const;
@@ -8,13 +8,12 @@ export const RATE_LIMIT = {
 // caching constants
 export const CACHE = {
   METADATA_KEY_PREFIX: "metadata",
-  METADATA_TTL: 3600, // 1 hour in seconds
+  METADATA_TTL: 60 * 60 * 1000, // 1 hour in seconds
 } as const;
 
 // browser constants
 export const BROWSER = {
   TIMEOUT: 30000, // 30 seconds
-  WAIT_UNTIL: "networkidle" as const,
 } as const;
 
 // server constants

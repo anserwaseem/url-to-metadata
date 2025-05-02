@@ -74,9 +74,12 @@ app.get(SERVER.METADATA_PATH, async (c: Context) => {
   }
 
   try {
-    // check KV cache first
+    // check if user wants to bypass cache
+    const noCache = c.req.query("noCache") === "true";
+
+    // check KV cache first if cache is not bypassed
     const key = `${CACHE.METADATA_KEY_PREFIX}${REDIS.KEY_SEPARATOR}${url}`;
-    const cached = await c.env?.METADATA_CACHE?.get(key);
+    const cached = noCache ? null : await c.env?.METADATA_CACHE?.get(key);
     if (cached) {
       return c.json({
         success: true,

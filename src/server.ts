@@ -13,14 +13,8 @@ const redis = new Redis({
 
 const app = new Hono();
 
-// middleware
+// cors middleware
 app.use("*", cors());
-
-// logging middleware
-app.use("*", async (c: Context, next) => {
-  console.log(`[${new Date().toISOString()}] ${c.req.method} ${c.req.url}`);
-  await next();
-});
 
 // rate limiting middleware using Redis
 app.use("*", async (c: Context, next) => {
@@ -32,7 +26,7 @@ app.use("*", async (c: Context, next) => {
   const ip = c.req.header("CF-Connecting-IP") || "unknown";
   const key = `${RATE_LIMIT.KEY_PREFIX}${REDIS.KEY_SEPARATOR}${ip}`;
 
-  // use Redis for atomic operations
+  // atomic operations - increment the request count and set an expiration
   const [current] = await redis
     .multi()
     .incr(key)
@@ -50,35 +44,107 @@ app.use("*", async (c: Context, next) => {
 app.get(SERVER.HEALTH_CHECK_PATH, (c: Context) => c.json({ status: "ok" }));
 
 // metadata extraction endpoint
-app.get("/metadata", async (c: Context) => {
+app.get(SERVER.METADATA_PATH, async (c: Context) => {
   const url = c.req.query("url");
 
+  // validate URL parameter
   if (!url) {
-    return c.json({ error: "url parameter is required" }, 400);
+    return c.json(
+      {
+        success: false,
+        error: "url parameter is required",
+        code: "MISSING_URL",
+      },
+      400,
+    );
+  }
+
+  // validate URL format
+  try {
+    new URL(url);
+  } catch {
+    return c.json(
+      {
+        success: false,
+        error: "invalid url format",
+        code: "INVALID_URL",
+      },
+      400,
+    );
   }
 
   try {
-    // check KV cache first (faster reads at edge)
+    // check KV cache first
     const key = `${CACHE.METADATA_KEY_PREFIX}${REDIS.KEY_SEPARATOR}${url}`;
     const cached = await c.env?.METADATA_CACHE?.get(key);
-    console.log("c.env", c.env);
-    console.log("cached", cached);
     if (cached) {
-      return c.json(JSON.parse(cached));
+      return c.json({
+        success: true,
+        data: JSON.parse(cached),
+        cached: true,
+      });
     }
 
     // extract metadata
     const metadata = await extractMetadata(url);
 
-    // cache in KV (edge caching for faster subsequent reads)
+    // validate extracted metadata
+    if (!metadata.title) {
+      return c.json(
+        {
+          success: false,
+          error: "could not extract metadata from the URL",
+          code: "NO_METADATA",
+        },
+        422,
+      );
+    }
+
+    // cache in KV
     await c.env?.METADATA_CACHE?.put(key, JSON.stringify(metadata), {
       expirationTtl: CACHE.METADATA_TTL,
     });
 
-    return c.json(metadata);
+    return c.json({
+      success: true,
+      data: metadata,
+      cached: false,
+    });
   } catch (error) {
     console.error("Error extracting metadata:", error);
-    return c.json({ error: "failed to extract metadata" }, 500);
+
+    // handle specific error cases
+    if (error instanceof Error) {
+      if (error.message.includes("timeout")) {
+        return c.json(
+          {
+            success: false,
+            error: "request timeout while extracting metadata",
+            code: "TIMEOUT",
+          },
+          504,
+        );
+      }
+      if (error.message.includes("fetch")) {
+        return c.json(
+          {
+            success: false,
+            error: "could not fetch the URL",
+            code: "FETCH_ERROR",
+          },
+          502,
+        );
+      }
+    }
+
+    return c.json(
+      {
+        success: false,
+        error: "failed to extract metadata",
+        code: "INTERNAL_ERROR",
+      },
+      500,
+    );
   }
 });
 
@@ -88,5 +154,4 @@ app.onError((err: Error, c: Context) => {
   return c.json({ error: "internal server error" }, 500);
 });
 
-// Export for Cloudflare Workers
 export default app;

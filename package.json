@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "wrangler:dev": "bunx wrangler dev",
     "dev": "bun run --watch src/server.ts",
     "build": "bun build ./src/server.ts --outdir ./dist --target node",
     "start": "bun run dist/server.js",

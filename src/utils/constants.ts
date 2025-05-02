@@ -21,6 +21,7 @@ export const BROWSER = {
 export const SERVER = {
   PORT: 3000,
   HEALTH_CHECK_PATH: "/",
+  METADATA_PATH: "/metadata",
 } as const;
 
 // redis constants

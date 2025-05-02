@@ -10,6 +10,9 @@ type Metadata = {
   siteName: string | null;
   type: string | null;
   locale: string | null;
+  favicon: string | null;
+  language: string | null;
+  metaTags: Record<string, string>;
 };
 
 export const extractMetadata = async (url: string): Promise<Metadata> => {
@@ -18,6 +21,26 @@ export const extractMetadata = async (url: string): Promise<Metadata> => {
     const response = await fetch(url);
     const html = await response.text();
     const $ = cheerio.load(html);
+
+    // extract favicon
+    const favicon =
+      $('link[rel="icon"]').attr("href") ||
+      $('link[rel="shortcut icon"]').attr("href") ||
+      $('link[rel="apple-touch-icon"]').attr("href") ||
+      null;
+
+    // extract language
+    const language = $("html").attr("lang") || null;
+
+    // extract all meta tags
+    const metaTags: Record<string, string> = {};
+    $("meta").each((_, el) => {
+      const name = $(el).attr("name") || $(el).attr("property");
+      const content = $(el).attr("content");
+      if (name && content) {
+        metaTags[name] = content;
+      }
+    });
 
     // extract basic metadata
     const metadata: Metadata = {
@@ -34,6 +57,9 @@ export const extractMetadata = async (url: string): Promise<Metadata> => {
       siteName: $('meta[property="og:site_name"]').attr("content") || null,
       type: $('meta[property="og:type"]').attr("content") || null,
       locale: $('meta[property="og:locale"]').attr("content") || null,
+      favicon: favicon ? new URL(favicon, url).toString() : null,
+      language,
+      metaTags,
     };
 
     // if we need to render JavaScript, use Browserless

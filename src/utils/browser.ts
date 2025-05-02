@@ -9,6 +9,9 @@ type BrowserlessResponse = {
     siteName: string | null;
     type: string | null;
     locale: string | null;
+    favicon: string | null;
+    language: string | null;
+    metaTags: Record<string, string>;
   };
 };
 
@@ -34,6 +37,11 @@ export const getMetadataFromBrowser = async (
         { selector: 'meta[property="og:site_name"]', attribute: "content" },
         { selector: 'meta[property="og:type"]', attribute: "content" },
         { selector: 'meta[property="og:locale"]', attribute: "content" },
+        { selector: 'link[rel="icon"]', attribute: "href" },
+        { selector: 'link[rel="shortcut icon"]', attribute: "href" },
+        { selector: 'link[rel="apple-touch-icon"]', attribute: "href" },
+        { selector: "html", attribute: "lang" },
+        { selector: "meta" },
       ],
       timeout: BROWSER.TIMEOUT,
     }),
